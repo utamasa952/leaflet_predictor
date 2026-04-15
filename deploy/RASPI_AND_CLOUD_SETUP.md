@@ -23,7 +23,7 @@ Architecture
 - Run on Pi:
   sudo apt update
   sudo apt install -y git python3-venv python3-pip build-essential pkg-config \
-    libgeos-dev libproj-dev proj-data proj-bin libgdal-dev gdal-bin \
+    cmake libgeos-dev libproj-dev proj-data proj-bin libgdal-dev gdal-bin \
     libnetcdf-dev libhdf5-dev libopenblas-dev liblapack-dev
 
 3) Clone project and create venv
