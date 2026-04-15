@@ -37,9 +37,19 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 # OpenDrift modules
-from opendrift.models.oceandrift import OceanDrift
-from opendrift.readers.reader_netCDF_CF_generic import Reader
-from opendrift.readers import reader_constant
+# cartopy は OpenDrift の内部依存で、未導入だと import 時点で失敗することがある。
+# その場合は漂流計算をスキップして、気球軌道のみ返すようにする。
+try:
+    from opendrift.models.oceandrift import OceanDrift
+    from opendrift.readers.reader_netCDF_CF_generic import Reader
+    from opendrift.readers import reader_constant
+    OPENDRIFT_AVAILABLE = True
+except Exception as exc:
+    OceanDrift = None
+    Reader = None
+    reader_constant = None
+    OPENDRIFT_AVAILABLE = False
+    OPENDRIFT_IMPORT_ERROR = exc
 
 # =============================================================================
 # 1. Tawhiri (気球軌道予測) 連携パート
@@ -280,6 +290,16 @@ def export_combined_map(balloon_df, drift_nc, png_path):
     plt.savefig(png_path, dpi=200, bbox_inches='tight')
     plt.close()
 
+
+def build_fallback_drift_dataframe(splash_time, landing_point):
+    return pd.DataFrame({
+        'time': [splash_time],
+        'lat': [landing_point['lat']],
+        'lon': [landing_point['lon']],
+        'alt': [0.0],
+        'type': ['drift_mean']
+    })
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -325,6 +345,24 @@ def main():
     t_start = splash_time - timedelta(hours=6)
     t_end = splash_time + timedelta(hours=args.hours + 6)
     
+    # OpenDrift が使えない環境では、気球軌道のみ返す。
+    if not OPENDRIFT_AVAILABLE:
+        print(f"[WARN] OpenDrift dependencies are unavailable: {OPENDRIFT_IMPORT_ERROR}")
+        print("[WARN] Skipping ocean drift simulation and returning balloon-only fallback output.")
+        df_drift_mean = build_fallback_drift_dataframe(splash_time, landing_point)
+        balloon_df['type'] = 'balloon'
+        cols = ['time', 'lat', 'lon', 'alt', 'type']
+        df_combined = pd.concat([
+            balloon_df.reindex(columns=cols),
+            df_drift_mean.reindex(columns=cols)
+        ])
+
+        combined_csv = os.path.join(args.outdir, "trajectory_combined.csv")
+        df_combined.to_csv(combined_csv, index=False)
+        print(f"[Output] Combined CSV: {combined_csv}")
+        print("[DONE] Balloon-only fallback completed successfully.")
+        return
+
     # CMEMS データ取得
     curr_nc = None
     wind_nc = None
@@ -402,13 +440,7 @@ def main():
         })
     else:
         # Fallback: keep a single drift point at splashdown so frontend can still render.
-        df_drift_mean = pd.DataFrame({
-            'time': [splash_time],
-            'lat': [landing_point['lat']],
-            'lon': [landing_point['lon']],
-            'alt': [0.0],
-            'type': ['drift_mean']
-        })
+        df_drift_mean = build_fallback_drift_dataframe(splash_time, landing_point)
     
     # 【修正箇所】ここで df_balloon ではなく balloon_df を使う
     balloon_df['type'] = 'balloon'

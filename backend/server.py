@@ -8,6 +8,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+
+def _parse_cors_origins() -> list[str]:
+    """Read allowed CORS origins from env, fallback to permissive for local dev."""
+    raw = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+    if raw == "*":
+        return ["*"]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
 # --- パス設定 ---
 # このファイル(server.py)があるディレクトリ(backend)から相対的に計算します
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,7 +29,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # CORS設定 (念のため。今回は同一オリジンなのでなくても動くはずですがトラブル防止として)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_parse_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,3 +101,8 @@ def read_index():
     if not os.path.exists(index_path):
         return {"error": "index.htmlが見つかりません。frontendフォルダの中にindex.htmlがあるか確認してください。"}
     return FileResponse(index_path)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
