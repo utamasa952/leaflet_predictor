@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: leaflet-predictor-api
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: |
+      pip install -r backend/requirements.txt
+    startCommand: |
+      uvicorn backend.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CORS_ALLOW_ORIGINS
+        value: https://XXX.github.io
+      - key: COPERNICUSMARINE_SERVICE_USERNAME
+        sync: false
+      - key: COPERNICUSMARINE_SERVICE_PASSWORD
+        sync: false

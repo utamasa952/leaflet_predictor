@@ -1,0 +1,17 @@
+[Unit]
+Description=Leaflet Predictor API (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/leaflet_predictor
+Environment=PYTHONUNBUFFERED=1
+Environment=CORS_ALLOW_ORIGINS=*
+ExecStart=/home/pi/leaflet_predictor/.venv/bin/python -m uvicorn backend.server:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

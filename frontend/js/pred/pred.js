@@ -180,8 +180,13 @@ function runPrediction() {
     const driftInput = document.getElementById('drift_hours');
     const driftHours = driftInput ? driftInput.value : 6;
 
-    // ローカルのPython APIのURLを構築
-    const apiUrl = `/api/simulate?lat=${lat}&lon=${lon}&time=${timeISO}&ascent_rate=${ascent}&burst_alt=${burst}&descent_rate=${drag}&hours=${driftHours}`;
+    // APIベースURLは window.PREDICTOR_API_BASE があれば優先して使う。
+    const apiBase = (typeof window.PREDICTOR_API_BASE === 'string' && window.PREDICTOR_API_BASE.trim() !== '')
+        ? window.PREDICTOR_API_BASE.replace(/\/$/, '')
+        : '';
+
+    // ローカル/リモートのPython API URLを構築
+    const apiUrl = `${apiBase}/api/simulate?lat=${lat}&lon=${lon}&time=${timeISO}&ascent_rate=${ascent}&burst_alt=${burst}&descent_rate=${drag}&hours=${driftHours}`;
 
     // APIを呼び出す
     fetch(apiUrl)
